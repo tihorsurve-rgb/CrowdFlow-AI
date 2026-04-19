@@ -1,7 +1,16 @@
 import { useState } from 'react';
 
+type ZoneStatus = 'normal' | 'moderate' | 'congested';
+
+type Zone = {
+  name: string;
+  queue: number;
+  density: number;
+  status: ZoneStatus;
+};
+
 function OpsDashboard() {
-  const [zones, setZones] = useState([
+  const [zones, setZones] = useState<Zone[]>([
     {
       name: 'Gate A Entrance',
       queue: 2,
@@ -32,13 +41,13 @@ function OpsDashboard() {
   const [rerouteActive, setRerouteActive] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
-  const getStatusClass = (status) => {
+  const getStatusClass = (status: ZoneStatus): string => {
     if (status === 'congested') return 'badge status-congested';
     if (status === 'moderate') return 'badge status-moderate';
     return 'badge status-normal';
   };
 
-  const getZoneStatus = (density) => {
+  const getZoneStatus = (density: number): ZoneStatus => {
     if (density >= 85) return 'congested';
     if (density >= 50) return 'moderate';
     return 'normal';
