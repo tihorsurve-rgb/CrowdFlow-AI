@@ -1,13 +1,11 @@
 import { useState } from 'react';
 
-type ZoneStatus = 'normal' | 'moderate' | 'congested';
-
-type Zone = {
-  name: string;
-  queue: number;
-  density: number;
-  status: ZoneStatus;
-};
+import {
+  getStatusClass,
+  deployStaffToZones,
+  rerouteCrowdAcrossZones,
+  type Zone,
+} from '../utils/crowdLogic';
 
 function OpsDashboard() {
   const [zones, setZones] = useState<Zone[]>([
@@ -41,35 +39,11 @@ function OpsDashboard() {
   const [rerouteActive, setRerouteActive] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
-  const getStatusClass = (status: ZoneStatus): string => {
-    if (status === 'congested') return 'badge status-congested';
-    if (status === 'moderate') return 'badge status-moderate';
-    return 'badge status-normal';
-  };
-
-  const getZoneStatus = (density: number): ZoneStatus => {
-    if (density >= 85) return 'congested';
-    if (density >= 50) return 'moderate';
-    return 'normal';
-  };
-
+  // ✅ CLEAN: using utility function
   const handleDeployStaff = () => {
     if (staffDeployed) return;
 
-    const updatedZones = zones.map((zone) => {
-      if (zone.name === 'Concession B') {
-        const newQueue = Math.max(zone.queue - 8, 0);
-        const newDensity = Math.max(zone.density - 15, 0);
-
-        return {
-          ...zone,
-          queue: newQueue,
-          density: newDensity,
-          status: getZoneStatus(newDensity),
-        };
-      }
-      return zone;
-    });
+    const updatedZones = deployStaffToZones(zones);
 
     setZones(updatedZones);
     setStaffDeployed(true);
@@ -78,45 +52,11 @@ function OpsDashboard() {
     );
   };
 
+  // ✅ CLEAN: using utility function
   const handleRerouteCrowd = () => {
     if (rerouteActive) return;
 
-    const updatedZones = zones.map((zone) => {
-      if (zone.name === 'Concession B') {
-        const newQueue = Math.max(zone.queue - 10, 0);
-        const newDensity = Math.max(zone.density - 20, 0);
-
-        return {
-          ...zone,
-          queue: newQueue,
-          density: newDensity,
-          status: getZoneStatus(newDensity),
-        };
-      }
-
-      if (zone.name === 'Gate A Entrance') {
-        const newDensity = Math.min(zone.density + 10, 100);
-        return {
-          ...zone,
-          density: newDensity,
-          status: getZoneStatus(newDensity),
-        };
-      }
-
-      if (zone.name === 'East Washrooms') {
-        const newQueue = zone.queue + 2;
-        const newDensity = Math.min(zone.density + 8, 100);
-
-        return {
-          ...zone,
-          queue: newQueue,
-          density: newDensity,
-          status: getZoneStatus(newDensity),
-        };
-      }
-
-      return zone;
-    });
+    const updatedZones = rerouteCrowdAcrossZones(zones);
 
     setZones(updatedZones);
     setRerouteActive(true);
@@ -191,6 +131,7 @@ function OpsDashboard() {
             className="button-primary"
             onClick={handleDeployStaff}
             disabled={staffDeployed}
+            aria-label="Deploy staff to reduce congestion at Concession B"
           >
             {staffDeployed ? 'Staff Deployed' : 'Deploy Staff'}
           </button>
@@ -199,6 +140,7 @@ function OpsDashboard() {
             className="button-secondary"
             onClick={handleRerouteCrowd}
             disabled={rerouteActive}
+            aria-label="Reroute crowd away from Concession B"
           >
             {rerouteActive ? 'Reroute Active' : 'Reroute Crowd'}
           </button>
@@ -219,7 +161,10 @@ function OpsDashboard() {
             <h3 className="zone-name">{zone.name}</h3>
             <p className="zone-meta">Queue Time: {zone.queue} min</p>
             <p className="zone-meta">Density: {zone.density}%</p>
-            <span className={getStatusClass(zone.status)}>
+            <span
+              className={getStatusClass(zone.status)}
+              aria-label={`Zone status ${zone.status}`}
+            >
               {zone.status.charAt(0).toUpperCase() + zone.status.slice(1)}
             </span>
           </div>
